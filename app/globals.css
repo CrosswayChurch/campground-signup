@@ -1,0 +1,82 @@
+:root{
+  --primary: #568da2;
+  --bg: #ffffff;
+  --text: #0f172a;
+  --muted: rgba(15, 23, 42, 0.55);
+  --border: rgba(15, 23, 42, 0.10);
+  --shadow: 0 16px 50px rgba(2, 8, 23, 0.10);
+  --radius: 16px;
+}
+
+*{ box-sizing: border-box; }
+html, body { padding: 0; margin: 0; background: var(--bg); color: var(--text); }
+body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; }
+
+.page{
+  min-height: 100vh;
+}
+
+.topBar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 18px 22px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.monthNav{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+.monthPill{
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  background: #fff;
+}
+
+.iconBtn{
+  height: 40px;
+  width: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.iconBtn:hover{ box-shadow: 0 6px 20px rgba(2,8,23,.08); }
+
+.btn{
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.btnPrimary{
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 1000;
+  letter-spacing: .2px;
+  box-shadow: 0 12px 30px rgba(86, 141, 162, .28);
+}
+.btnPrimary:hover{ filter: brightness(0.98); }
+.btnPrimary:disabled{ opacity: 0.6; cursor:not-allowed; }
+
+.wide{ width: 100%; }
