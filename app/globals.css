@@ -80,3 +80,1190 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, H
 .btnPrimary:disabled{ opacity: 0.6; cursor:not-allowed; }
 
 .wide{ width: 100%; }
+
+.calendarStage{
+  display:flex;
+  justify-content:center;
+  padding: 10px 18px 40px;
+}
+
+.calendarCard{
+  width: min(900px, 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:#fff;
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+.dow{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  padding: 8px 4px 10px;
+}
+
+.dowCell{
+  font-size: 12px;
+  font-weight: 1000;
+  opacity: .55;
+  text-align:center;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  padding: 4px;
+}
+
+.dayCell{
+  position: relative;
+  height: 70px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:#fff;
+  cursor: pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 0;
+}
+.dayCell:hover{ box-shadow: 0 10px 22px rgba(2,8,23,.08); }
+.dayCell:disabled{ cursor: default; opacity: .45; box-shadow:none; }
+
+.dayCircle{
+  height: 44px;
+  width: 44px;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 1000;
+}
+
+.dayCell.selectable .dayCircle{
+  border: 2px solid rgba(86, 141, 162, .35);
+}
+
+.dayCell.selected{
+  border-color: rgba(86, 141, 162, .55);
+  box-shadow: 0 16px 30px rgba(86, 141, 162, .18);
+}
+.dayCell.selected .dayCircle{
+  background: var(--primary);
+  color:#fff;
+  border-color: var(--primary);
+}
+
+.dayCell.muted{
+  opacity: .35;
+}
+
+.badge{
+  position:absolute;
+  top: 8px;
+  right: 10px;
+  height: 22px;
+  min-width: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 12px;
+  font-weight: 1000;
+  border: 1px solid rgba(86, 141, 162, .25);
+  color: rgba(15,23,42,.7);
+  background: rgba(86,141,162,.10);
+}
+.badge.has{
+  background: rgba(86,141,162,.18);
+  border-color: rgba(86,141,162,.35);
+}
+
+.hint{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 12px 8px 4px;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 13px;
+}
+.dot{
+  height: 10px;
+  width: 10px;
+  border-radius: 999px;
+  background: var(--primary);
+  opacity: .7;
+}
+
+/* Drawer / Bottom sheet */
+.drawerOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(2,8,23,.30);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+  z-index: 60;
+}
+.drawerOverlay.open{
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer{
+  position: fixed;
+  top: 0;
+  right: -520px;
+  height: 100vh;
+  width: 480px;
+  max-width: calc(100vw - 24px);
+  background:#fff;
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  z-index: 70;
+  transition: right .22s ease;
+  display:flex;
+  flex-direction: column;
+  border-top-left-radius: 18px;
+  border-bottom-left-radius: 18px;
+}
+.drawer.open{ right: 0; }
+
+.drawerHeader{
+  padding: 18px 18px 10px;
+  display:flex;
+  align-items:flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.drawerTitle{
+  font-weight: 1100;
+  font-size: 18px;
+}
+.drawerSub{
+  color: var(--muted);
+  font-weight: 800;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.drawerBody{
+  padding: 14px 18px;
+  overflow:auto;
+  flex: 1;
+}
+
+.sectionLabel{
+  font-size: 12px;
+  font-weight: 1100;
+  opacity: .6;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.emptyState{
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  font-weight: 1000;
+  color: rgba(15,23,42,.75);
+  background: rgba(2,8,23,.02);
+}
+
+.list{
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.listRow{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  padding: 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.name{ font-weight: 1000; }
+.seats{
+  height: 28px;
+  min-width: 40px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(86,141,162,.12);
+  border: 1px solid rgba(86,141,162,.25);
+  font-weight: 1100;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.drawerFooter{
+  border-top: 1px solid var(--border);
+  padding: 14px 18px 18px;
+}
+
+/* ✅ ADDED: Footer row for Back + Submit in signup mode */
+.drawerFooterRow{
+  display: flex;
+  gap: 10px;
+}
+.drawerFooterRow .wide{
+  flex: 1;
+}
+
+/* Form */
+.field{ margin-bottom: 12px; }
+.label{
+  font-weight: 1000;
+  font-size: 12px;
+  opacity: .65;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  margin-bottom: 6px;
+}
+
+.input{
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 0 12px;
+  font-size: 15px;
+  outline: none;
+}
+.input:focus{
+  border-color: rgba(86,141,162,.55);
+  box-shadow: 0 0 0 4px rgba(86,141,162,.16);
+}
+
+.helper{
+  margin-top: 6px;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.error{
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(200,0,0,.18);
+  background: rgba(200,0,0,.06);
+  color: rgba(140,0,0,.95);
+  font-weight: 1000;
+}
+
+.pillLine{ margin-bottom: 12px; }
+.pill{
+  display:inline-flex;
+  align-items:center;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(86,141,162,.12);
+  border: 1px solid rgba(86,141,162,.25);
+  font-weight: 1000;
+}
+
+/* ✅ REMOVED/DEPRECATED MODAL STYLES
+   We no longer use the centered modal; everything is in the drawer now.
+   Keeping these empty prevents old modal classes from affecting anything.
+*/
+.modalOverlay,
+.modal,
+.modalHeader,
+.modalTitle,
+.modalBody,
+.modalFooter{
+  display: none !important;
+}
+
+/* =========================
+   ✅ ADDED: ADMIN PAGE + MODAL STYLES
+   (Only new styles; does not change existing ones)
+========================= */
+
+.adminPage{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 18px 18px 50px;
+}
+
+.adminTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.adminTitle{
+  font-weight: 1100;
+  font-size: 20px;
+}
+
+.adminSub{
+  color: var(--muted);
+  font-weight: 800;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.adminCard{
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+.adminMonthNav{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.adminMonthPill{
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-weight: 1000;
+  background: #fff;
+}
+
+.adminIconBtn{
+  height: 40px;
+  width: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.adminIconBtn:hover{ box-shadow: 0 6px 20px rgba(2,8,23,.08); }
+
+.adminBtn{
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 1000;
+}
+
+.adminDow{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  padding: 8px 4px 10px;
+}
+
+.adminDowCell{
+  font-size: 12px;
+  font-weight: 1000;
+  opacity: .55;
+  text-align:center;
+}
+
+.adminGrid{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  padding: 4px;
+}
+
+.adminDay{
+  position: relative;
+  height: 70px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:#fff;
+  cursor: pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.adminDay:hover{ box-shadow: 0 10px 22px rgba(2,8,23,.08); }
+
+.adminDay.muted{
+  opacity: .35;
+}
+
+.adminDay.selected{
+  border-color: rgba(86, 141, 162, .55);
+  box-shadow: 0 16px 30px rgba(86, 141, 162, .18);
+}
+
+.adminDayNum{
+  height: 44px;
+  width: 44px;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 1100;
+  border: 2px solid rgba(86, 141, 162, .18);
+}
+
+.adminBadge{
+  position:absolute;
+  top: 8px;
+  right: 10px;
+  height: 22px;
+  min-width: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 12px;
+  font-weight: 1000;
+  border: 1px solid rgba(86, 141, 162, .25);
+  color: rgba(15,23,42,.75);
+  background: rgba(86,141,162,.12);
+}
+
+.adminHint{
+  margin-top: 12px;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+/* Modal */
+.adminModalOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(2,8,23,.38);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+  z-index: 80;
+}
+.adminModalOverlay.open{
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.adminModal{
+  position: fixed;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%) scale(.98);
+  width: min(860px, calc(100vw - 28px));
+  max-height: min(80vh, 720px);
+  background:#fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+  display:flex;
+  flex-direction: column;
+  overflow:hidden;
+}
+.adminModal.open{
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.adminModalHeader{
+  display:flex;
+  align-items:flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.adminModalTitle{
+  font-weight: 1100;
+  font-size: 18px;
+}
+
+.adminModalSub{
+  color: var(--muted);
+  font-weight: 800;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.adminModalBody{
+  padding: 14px 16px;
+  overflow:auto;
+  flex: 1;
+}
+
+.adminModalFooter{
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border);
+  display:flex;
+  justify-content:flex-end;
+}
+
+.adminError{
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(200,0,0,.18);
+  background: rgba(200,0,0,.06);
+  color: rgba(140,0,0,.95);
+  font-weight: 1000;
+}
+
+.adminEmpty{
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  font-weight: 1000;
+  color: rgba(15,23,42,.75);
+  background: rgba(2,8,23,.02);
+}
+
+.adminList{
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.adminRow{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.adminRowMain{
+  flex: 1;
+  min-width: 0;
+}
+
+.adminRowName{
+  font-weight: 1100;
+}
+
+.adminRowMeta{
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.adminRowSeats{
+  height: 28px;
+  min-width: 44px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(86,141,162,.12);
+  border: 1px solid rgba(86,141,162,.25);
+  font-weight: 1100;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-left: 10px;
+}
+
+.adminRowActions{
+  display:flex;
+  gap: 10px;
+  margin-left: 12px;
+}
+
+.adminSmallBtn{
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 1000;
+}
+.adminSmallBtn.primary{
+  border: 0;
+  background: var(--primary);
+  color:#fff;
+}
+.adminSmallBtn.danger{
+  border-color: rgba(200,0,0,.25);
+  background: rgba(200,0,0,.06);
+  color: rgba(140,0,0,.95);
+}
+
+.adminRow{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.adminEditGrid{
+  width: 100%;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.adminField{
+  display:flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.adminLabel{
+  font-weight: 1000;
+  font-size: 12px;
+  opacity: .65;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+}
+
+.adminInput{
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 0 12px;
+  font-size: 15px;
+  outline: none;
+}
+.adminInput:focus{
+  border-color: rgba(86,141,162,.55);
+  box-shadow: 0 0 0 4px rgba(86,141,162,.16);
+}
+
+.adminEditActions{
+  width: 100%;
+  display:flex;
+  justify-content:flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* MOBILE: keep your existing drawer behavior + make admin responsive */
+@media (max-width: 860px){
+  .topBar{
+    padding: 14px 14px;
+  }
+
+  .calendarCard{
+    border-radius: 20px;
+    padding: 12px;
+  }
+
+  .dayCell{
+    height: 58px;
+    border-radius: 18px;
+  }
+  .dayCircle{
+    height: 40px;
+    width: 40px;
+  }
+
+  /* ✅ FIX #1: hide attendee count badge on calendar (mobile only) */
+  .badge{
+    display: none !important;
+  }
+
+  .drawer{
+    right: auto;
+
+    /* ✅ FIX #2: center the bottom sheet on all mobile sizes */
+    left: 50%;
+    transform: translateX(-50%);
+
+    top: auto;
+    bottom: -85vh;
+    width: 100vw;
+
+    /* ✅ override desktop max-width that was causing the off-center look */
+    max-width: 100vw;
+
+    height: 75vh;
+    border-radius: 20px 20px 0 0;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    transition: bottom .22s ease;
+  }
+  .drawer.open{ bottom: 0; }
+
+  /* ✅ ADDED: admin mobile tweaks (doesn't affect main page) */
+  .adminDay{ height: 58px; }
+  .adminDayNum{ height: 40px; width: 40px; }
+  .adminEditGrid{ grid-template-columns: 1fr; }
+}
+
+/* ✅ iPad portrait should use the mobile centered drawer + hide badges
+   iPad landscape stays desktop automatically */
+@media (max-width: 1024px) and (orientation: portrait){
+  .badge{
+    display: none !important;
+  }
+
+  .drawer{
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    top: auto;
+    bottom: -85vh;
+    width: 100vw;
+    max-width: 100vw;
+    height: 75vh;
+    border-radius: 20px 20px 0 0;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    transition: bottom .22s ease;
+  }
+  .drawer.open{ bottom: 0; }
+}
+
+/* =========================
+   ADMIN LOGIN OVERLAY (FULL BLACK)
+========================= */
+
+.adminGate{
+  position: fixed;
+  inset: 0;
+  background: #000; /* FULL BLACK */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+}
+
+/* Center login box */
+.adminGateCard{
+  width: min(420px, 92%);
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 16px;
+  padding: 26px;
+  box-shadow: 0 25px 80px rgba(0,0,0,.55);
+  text-align: center;
+}
+
+/* Title */
+.adminGateTitle{
+  font-size: 22px;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+/* Subtitle */
+.adminGateSub{
+  font-size: 13px;
+  color: rgba(15,23,42,.65);
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+/* Password field */
+.adminGateInput{
+  width: 100%;
+  height: 46px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 0 12px;
+  font-size: 16px;
+  outline: none;
+  margin-bottom: 12px;
+}
+
+.adminGateInput:focus{
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(86,141,162,.25);
+}
+
+/* Button */
+.adminGateBtn{
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  letter-spacing: .3px;
+}
+
+.adminGateBtn:hover{
+  filter: brightness(.95);
+}
+
+.adminGateBtn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* Error message */
+.adminGateError{
+  margin-top: 10px;
+  font-size: 13px;
+  color: #b91c1c;
+  font-weight: 800;
+}
+
+/* =========================================================
+   New: Role-based signup styles
+   Uses the same tokens (--primary, --border, --shadow) as
+   the rest of the app, just for the role/slot views.
+   ========================================================= */
+
+.roleSection{
+  margin-top: 18px;
+}
+
+.roleHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+.roleHeaderLeft{
+  display:flex;
+  flex-direction:column;
+  gap: 2px;
+}
+.roleTitle{
+  font-weight: 1100;
+  font-size: 15px;
+  letter-spacing: .2px;
+}
+.roleDesc{
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+.roleCount{
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(86,141,162,.10);
+  border: 1px solid rgba(86,141,162,.25);
+  font-weight: 1000;
+  font-size: 12px;
+  display:flex;
+  align-items:center;
+  color: rgba(15,23,42,.75);
+}
+.roleCount.full{
+  background: rgba(86,141,162,.18);
+  border-color: rgba(86,141,162,.45);
+  color: var(--text);
+}
+
+.slotList{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+}
+
+.slot{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+}
+.slot.empty{
+  border-style: dashed;
+  background: rgba(2,8,23,.015);
+}
+.slot.filled{
+  background: #fff;
+}
+.slotIndex{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height: 26px;
+  width: 26px;
+  border-radius: 999px;
+  background: rgba(86,141,162,.10);
+  border: 1px solid rgba(86,141,162,.25);
+  font-weight: 1000;
+  font-size: 12px;
+  color: rgba(15,23,42,.7);
+  flex-shrink: 0;
+}
+.slotMain{
+  flex: 1;
+  min-width: 0;
+}
+.slotName{
+  font-weight: 1000;
+  font-size: 15px;
+}
+.slotMeta{
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 800;
+  margin-top: 2px;
+}
+.slotEmpty{
+  color: var(--muted);
+  font-weight: 900;
+  font-style: italic;
+  font-size: 14px;
+}
+.slotActions{
+  display:flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.slotBtn{
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 1000;
+  font-size: 13px;
+}
+.slotBtn:hover{ box-shadow: 0 6px 14px rgba(2,8,23,.08); }
+.slotBtn.primary{
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 8px 20px rgba(86, 141, 162, .25);
+}
+.slotBtn.danger{
+  color: #b91c1c;
+}
+
+/* =========================================================
+   Public signup page (the form everyone sees)
+   ========================================================= */
+.publicPage{
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+.publicHero{
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 30px 22px 14px;
+}
+.publicHeroTitle{
+  font-size: 28px;
+  font-weight: 1100;
+  letter-spacing: -.3px;
+  margin: 0 0 6px;
+}
+.publicHeroSub{
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 15px;
+  margin: 0;
+}
+
+.dateBar{
+  max-width: 900px;
+  margin: 18px auto 0;
+  padding: 0 22px;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dateLabel{
+  font-weight: 1000;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+.dateSelect{
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-weight: 1000;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 220px;
+}
+
+.publicCard{
+  max-width: 900px;
+  margin: 18px auto 0;
+  padding: 0 22px;
+}
+.publicCardInner{
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow);
+  padding: 22px;
+}
+
+/* Modal form for filling a slot */
+.signupForm{
+  display:flex;
+  flex-direction:column;
+  gap: 14px;
+}
+.formField{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+}
+.formLabel{
+  font-weight: 1000;
+  font-size: 13px;
+  letter-spacing: .2px;
+}
+.formInput{
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 15px;
+  font-weight: 800;
+}
+.formInput:focus{
+  outline: none;
+  border-color: rgba(86,141,162,.6);
+  box-shadow: 0 0 0 4px rgba(86,141,162,.12);
+}
+.formHelp{
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+.formError{
+  background: rgba(185, 28, 28, .08);
+  border: 1px solid rgba(185, 28, 28, .25);
+  color: #991b1b;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 900;
+  font-size: 13px;
+}
+.formSuccess{
+  background: rgba(86,141,162,.10);
+  border: 1px solid rgba(86,141,162,.30);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 1000;
+  font-size: 14px;
+}
+
+.radioGroup{
+  display:flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.radioOption{
+  flex: 1;
+  min-width: 100px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-weight: 1000;
+  font-size: 13px;
+  cursor: pointer;
+  text-align:center;
+}
+.radioOption.selected{
+  border-color: rgba(86,141,162,.6);
+  background: rgba(86,141,162,.08);
+  box-shadow: 0 0 0 3px rgba(86,141,162,.12);
+}
+
+.formActions{
+  display:flex;
+  gap: 10px;
+  justify-content:flex-end;
+  margin-top: 4px;
+}
+
+/* Compact day strip used on the public page (instead of full calendar) */
+.sundayPicker{
+  max-width: 900px;
+  margin: 18px auto 0;
+  padding: 0 22px;
+}
+.sundayPickerInner{
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+.sundayList{
+  display:flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px;
+}
+.sundayPill{
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-weight: 1000;
+  cursor: pointer;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap: 2px;
+  min-width: 100px;
+}
+.sundayPill:hover{ box-shadow: 0 8px 18px rgba(2,8,23,.06); }
+.sundayPillTop{
+  font-size: 11px;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  opacity: .55;
+}
+.sundayPillDay{
+  font-size: 22px;
+  font-weight: 1100;
+}
+.sundayPillMonth{
+  font-size: 11px;
+  letter-spacing: .5px;
+  opacity: .65;
+}
+.sundayPill.selected{
+  border-color: rgba(86,141,162,.6);
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(86,141,162,.30);
+}
+.sundayPill.selected .sundayPillTop,
+.sundayPill.selected .sundayPillMonth{
+  opacity: .85;
+}
+
+@media (max-width: 640px){
+  .publicHeroTitle{ font-size: 22px; }
+  .slot{ padding: 10px 12px; }
+  .slotBtn{ font-size: 12px; padding: 0 10px; }
+}
