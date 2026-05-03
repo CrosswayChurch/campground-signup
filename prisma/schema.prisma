@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// One row per filled slot for a given Sunday.
+// Empty slots are inferred (not stored) — a Sunday is "complete" when
+// all required role rows + the desired attender rows exist.
+model Assignment {
+  id          String   @id @default(cuid())
+  serviceDate DateTime // The Sunday this assignment is for
+  role        Role     // What role they're filling
+  slotIndex   Int      // 0 for unique roles, 1..20 for ATTENDER
+
+  fullName    String
+  email       String?  // optional, but at least one of email/phone required
+  phone       String?  // optional, E.164 ideally
+  remindBy    Remind   @default(EMAIL) // EMAIL, SMS, or BOTH
+
+  // Reminder bookkeeping (so we don't double-send)
+  remind3Sent DateTime?
+  remind1Sent DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // No two people in the same slot for the same Sunday
+  @@unique([serviceDate, role, slotIndex])
+  @@index([serviceDate])
+  @@index([email])
+}
+
+enum Role {
+  ADULT_TEACHER     // Topic / adult teacher
+  CHILDRENS_TEACHER // Children's story
+  SONG_LEADER
+  MODERATOR
+  ATTENDER
+}
+
+enum Remind {
+  EMAIL
+  SMS
+  BOTH
+  NONE
+}
