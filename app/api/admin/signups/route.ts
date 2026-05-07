@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import { fromYmd, isAllowedSunday } from "@/lib/schedule";
 import { ATTENDER_CAP, roleByKey } from "@/lib/roles";
+import { sendByPreference } from "@/lib/messaging";
 
 export const dynamic = "force-dynamic";
 
@@ -149,6 +150,21 @@ export async function POST(req: Request) {
         remindBy: remindBy as any,
       },
     });
+
+    // Fire-and-forget confirmation message
+    sendByPreference(
+      {
+        id: created.id,
+        serviceDate: dt,
+        role,
+        fullName,
+        email: email || null,
+        phone: phone || null,
+        remindBy,
+      },
+      "confirm"
+    ).catch(() => {});
+
     return NextResponse.json({ ok: true, assignment: created });
   } catch (e: any) {
     if (String(e?.code) === "P2002") {
@@ -197,7 +213,6 @@ export async function PATCH(req: Request) {
     if (!Number.isFinite(n) || n < 1 || n > ATTENDER_CAP) {
       return NextResponse.json({ error: `Party size must be 1–${ATTENDER_CAP}` }, { status: 400 });
     }
-    // Capacity check for ATTENDER if increasing
     if (existing.role === "ATTENDER") {
       const next = new Date(existing.serviceDate);
       next.setDate(existing.serviceDate.getDate() + 1);
