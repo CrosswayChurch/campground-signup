@@ -10,7 +10,6 @@ function normEmail(v: unknown) {
 }
 
 function normPhone(v: unknown) {
-  // Strip everything except digits and a leading +
   let s = String(v || "").trim();
   if (!s) return "";
   const plus = s.startsWith("+");
@@ -19,7 +18,6 @@ function normPhone(v: unknown) {
 }
 
 // GET /api/signups?date=YYYY-MM-DD
-// Returns the assignments for that Sunday.
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -36,12 +34,12 @@ export async function GET(req: Request) {
     const assignments = await prisma.assignment.findMany({
       where: { serviceDate: { gte: dt, lt: next } },
       orderBy: [{ role: "asc" }, { slotIndex: "asc" }],
-      // Don't expose email/phone to public
       select: {
         id: true,
         role: true,
         slotIndex: true,
         fullName: true,
+        partySize: true,
       },
     });
 
@@ -55,7 +53,7 @@ export async function GET(req: Request) {
 }
 
 // POST /api/signups
-// Body: { serviceDate, role, slotIndex?, fullName, email?, phone?, remindBy }
+// Body: { serviceDate, role, fullName, email?, phone?, partySize?, remindBy }
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
@@ -63,11 +61,11 @@ export async function POST(req: Request) {
 
     const serviceDate = String(body.serviceDate || "").trim();
     const role = String(body.role || "").trim();
-    const slotIndexRaw = body.slotIndex;
     const fullName = String(body.fullName || "").trim();
     const email = normEmail(body.email);
     const phone = normPhone(body.phone);
     const remindBy = String(body.remindBy || "EMAIL").toUpperCase();
+    const partySizeRaw = Number(body.partySize);
 
     if (!isAllowedSunday(serviceDate)) {
       return NextResponse.json({ error: "Not a valid service Sunday" }, { status: 400 });
@@ -96,45 +94,51 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unknown role" }, { status: 400 });
     }
 
-    // Resolve slotIndex
-    let slotIndex: number;
-    if (roleDef.slots === 1) {
-      slotIndex = 0;
-    } else {
-      // ATTENDER — pick the lowest open slot if not specified
-      const requested = Number(slotIndexRaw);
-      if (Number.isFinite(requested) && requested >= 1 && requested <= ATTENDER_CAP) {
-        slotIndex = Math.floor(requested);
-      } else {
-        const dt = fromYmd(serviceDate)!;
-        const next = new Date(dt);
-        next.setDate(dt.getDate() + 1);
-        const taken = await prisma.assignment.findMany({
-          where: { serviceDate: { gte: dt, lt: next }, role: "ATTENDER" as any },
-          select: { slotIndex: true },
-        });
-        const takenSet = new Set(taken.map((t: { slotIndex: number }) => t.slotIndex));
-        let found = -1;
-        for (let i = 1; i <= ATTENDER_CAP; i++) {
-          if (!takenSet.has(i)) {
-            found = i;
-            break;
-          }
-        }
-        if (found === -1) {
-          return NextResponse.json({ error: "All attender slots are full" }, { status: 409 });
-        }
-        slotIndex = found;
-      }
-    }
-
     const dt = fromYmd(serviceDate)!;
-
-    // One-person-one-role-per-Sunday rule:
-    // Check if this email or phone is already on the schedule for that Sunday.
     const next = new Date(dt);
     next.setDate(dt.getDate() + 1);
 
+    // Determine party size. Solo roles always 1.
+    let partySize = 1;
+    if (roleDef.multipleEntries) {
+      if (!Number.isFinite(partySizeRaw) || partySizeRaw < 1) {
+        return NextResponse.json({ error: "Please enter how many people are attending (1 or more)" }, { status: 400 });
+      }
+      partySize = Math.floor(partySizeRaw);
+      if (partySize > ATTENDER_CAP) {
+        return NextResponse.json({ error: `Party size can't exceed ${ATTENDER_CAP}` }, { status: 400 });
+      }
+    }
+
+    // Resolve slotIndex
+    let slotIndex: number;
+    if (!roleDef.multipleEntries) {
+      slotIndex = 0;
+    } else {
+      // ATTENDER: check capacity and pick next sequential slotIndex
+      const existing = await prisma.assignment.findMany({
+        where: { serviceDate: { gte: dt, lt: next }, role: "ATTENDER" as any },
+        select: { slotIndex: true, partySize: true },
+      });
+      const usedSeats = existing.reduce(
+        (sum: number, e: { partySize: number }) => sum + (e.partySize || 1),
+        0
+      );
+      const remaining = ATTENDER_CAP - usedSeats;
+      if (partySize > remaining) {
+        return NextResponse.json(
+          { error: `Only ${remaining} spot${remaining === 1 ? "" : "s"} remaining for that Sunday.` },
+          { status: 409 }
+        );
+      }
+      const maxSlot = existing.reduce(
+        (m: number, e: { slotIndex: number }) => Math.max(m, e.slotIndex),
+        0
+      );
+      slotIndex = maxSlot + 1;
+    }
+
+    // One-person-one-role-per-Sunday: check email/phone not already used
     if (email || phone) {
       const conflicts = await prisma.assignment.findFirst({
         where: {
@@ -162,14 +166,14 @@ export async function POST(req: Request) {
           fullName,
           email: email || null,
           phone: phone || null,
+          partySize,
           remindBy: remindBy as any,
         },
       });
       return NextResponse.json({ ok: true, id: created.id });
     } catch (e: any) {
-      // Unique constraint — slot already taken
       if (String(e?.code) === "P2002") {
-        return NextResponse.json({ error: "That slot was just taken. Please pick another." }, { status: 409 });
+        return NextResponse.json({ error: "That role was just filled. Please refresh and try again." }, { status: 409 });
       }
       throw e;
     }
