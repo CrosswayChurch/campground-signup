@@ -43,7 +43,7 @@ export async function GET(req: Request) {
 }
 
 // POST /api/admin/signups — admin assigns someone to a slot
-// Body: { serviceDate, role, slotIndex?, fullName, email?, phone?, remindBy }
+// Body: { serviceDate, role, fullName, email?, phone?, partySize?, remindBy }
 export async function POST(req: Request) {
   if (!isAdminAuthed()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -52,11 +52,11 @@ export async function POST(req: Request) {
 
   const serviceDate = String(body.serviceDate || "").trim();
   const role = String(body.role || "").trim();
-  const slotIndexRaw = body.slotIndex;
   const fullName = String(body.fullName || "").trim();
   const email = normEmail(body.email);
   const phone = normPhone(body.phone);
   const remindBy = String(body.remindBy || "EMAIL").toUpperCase();
+  const partySizeRaw = Number(body.partySize);
 
   if (!isAllowedSunday(serviceDate)) {
     return NextResponse.json({ error: "Not a valid service Sunday" }, { status: 400 });
@@ -77,37 +77,47 @@ export async function POST(req: Request) {
   const roleDef = roleByKey(role);
   if (!roleDef) return NextResponse.json({ error: "Unknown role" }, { status: 400 });
 
-  let slotIndex: number;
-  if (roleDef.slots === 1) {
-    slotIndex = 0;
-  } else {
-    const requested = Number(slotIndexRaw);
-    if (Number.isFinite(requested) && requested >= 1 && requested <= ATTENDER_CAP) {
-      slotIndex = Math.floor(requested);
-    } else {
-      const dt = fromYmd(serviceDate)!;
-      const next = new Date(dt);
-      next.setDate(dt.getDate() + 1);
-      const taken = await prisma.assignment.findMany({
-        where: { serviceDate: { gte: dt, lt: next }, role: "ATTENDER" as any },
-        select: { slotIndex: true },
-      });
-      const takenSet = new Set(taken.map((t: { slotIndex: number }) => t.slotIndex));
-      let found = -1;
-      for (let i = 1; i <= ATTENDER_CAP; i++) {
-        if (!takenSet.has(i)) { found = i; break; }
-      }
-      if (found === -1) return NextResponse.json({ error: "All attender slots are full" }, { status: 409 });
-      slotIndex = found;
-    }
-  }
-
   const dt = fromYmd(serviceDate)!;
   const next = new Date(dt);
   next.setDate(dt.getDate() + 1);
 
-  // Enforce one-person-one-role rule (skip if no email and no phone — admin
-  // may want to add someone without contact info)
+  let partySize = 1;
+  if (roleDef.multipleEntries) {
+    if (!Number.isFinite(partySizeRaw) || partySizeRaw < 1) {
+      return NextResponse.json({ error: "Please enter how many people are attending" }, { status: 400 });
+    }
+    partySize = Math.floor(partySizeRaw);
+    if (partySize > ATTENDER_CAP) {
+      return NextResponse.json({ error: `Party size can't exceed ${ATTENDER_CAP}` }, { status: 400 });
+    }
+  }
+
+  let slotIndex: number;
+  if (!roleDef.multipleEntries) {
+    slotIndex = 0;
+  } else {
+    const existing = await prisma.assignment.findMany({
+      where: { serviceDate: { gte: dt, lt: next }, role: "ATTENDER" as any },
+      select: { slotIndex: true, partySize: true },
+    });
+    const usedSeats = existing.reduce(
+      (sum: number, e: { partySize: number }) => sum + (e.partySize || 1),
+      0
+    );
+    const remaining = ATTENDER_CAP - usedSeats;
+    if (partySize > remaining) {
+      return NextResponse.json(
+        { error: `Only ${remaining} spot${remaining === 1 ? "" : "s"} remaining.` },
+        { status: 409 }
+      );
+    }
+    const maxSlot = existing.reduce(
+      (m: number, e: { slotIndex: number }) => Math.max(m, e.slotIndex),
+      0
+    );
+    slotIndex = maxSlot + 1;
+  }
+
   if (email || phone) {
     const conflict = await prisma.assignment.findFirst({
       where: {
@@ -135,6 +145,7 @@ export async function POST(req: Request) {
         fullName,
         email: email || null,
         phone: phone || null,
+        partySize,
         remindBy: remindBy as any,
       },
     });
@@ -154,6 +165,10 @@ export async function PATCH(req: Request) {
   const body = await req.json().catch(() => null);
   const id = String(body?.id || "");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  // Look up the existing record to know its role and date for capacity check
+  const existing = await prisma.assignment.findUnique({ where: { id } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const data: any = {};
 
@@ -176,6 +191,37 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Bad remindBy" }, { status: 400 });
     }
     data.remindBy = v;
+  }
+  if (body.partySize !== undefined) {
+    const n = Number(body.partySize);
+    if (!Number.isFinite(n) || n < 1 || n > ATTENDER_CAP) {
+      return NextResponse.json({ error: `Party size must be 1–${ATTENDER_CAP}` }, { status: 400 });
+    }
+    // Capacity check for ATTENDER if increasing
+    if (existing.role === "ATTENDER") {
+      const next = new Date(existing.serviceDate);
+      next.setDate(existing.serviceDate.getDate() + 1);
+      const others = await prisma.assignment.findMany({
+        where: {
+          serviceDate: { gte: existing.serviceDate, lt: next },
+          role: "ATTENDER" as any,
+          NOT: { id },
+        },
+        select: { partySize: true },
+      });
+      const otherSeats = others.reduce(
+        (sum: number, e: { partySize: number }) => sum + (e.partySize || 1),
+        0
+      );
+      if (otherSeats + Math.floor(n) > ATTENDER_CAP) {
+        const remaining = ATTENDER_CAP - otherSeats;
+        return NextResponse.json(
+          { error: `Only ${remaining} spot${remaining === 1 ? "" : "s"} available.` },
+          { status: 409 }
+        );
+      }
+    }
+    data.partySize = Math.floor(n);
   }
 
   try {
