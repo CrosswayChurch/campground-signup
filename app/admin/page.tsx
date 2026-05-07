@@ -12,6 +12,7 @@ type AdminAssignment = {
   fullName: string;
   email: string | null;
   phone: string | null;
+  partySize: number;
   remindBy: "EMAIL" | "SMS" | "BOTH" | "NONE";
 };
 
@@ -20,6 +21,7 @@ type RoleDef = {
   label: string;
   description: string;
   slots: number;
+  multipleEntries?: boolean;
 };
 
 type SummaryMap = Record<string, number>;
@@ -92,13 +94,12 @@ export default function AdminPage() {
   const [roles, setRoles] = useState<RoleDef[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Assign form state (admin assigning someone)
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignRole, setAssignRole] = useState<RoleKey | null>(null);
-  const [assignSlotIndex, setAssignSlotIndex] = useState<number | null>(null);
   const [aFullName, setAFullName] = useState("");
   const [aEmail, setAEmail] = useState("");
   const [aPhone, setAPhone] = useState("");
+  const [aPartySize, setAPartySize] = useState(1);
   const [aRemindBy, setARemindBy] = useState<"EMAIL" | "SMS" | "BOTH" | "NONE">("EMAIL");
   const [aSubmitting, setASubmitting] = useState(false);
 
@@ -116,9 +117,7 @@ export default function AdminPage() {
       if (!res.ok) return;
       const data = await res.json();
       setSummary(data?.summary || {});
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
 
   async function loadRoles() {
@@ -126,12 +125,9 @@ export default function AdminPage() {
       const res = await fetch(`/api/signups?date=${encodeURIComponent(ymd(new Date()))}`, { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       if (Array.isArray(data?.roles)) setRoles(data.roles);
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
 
-  // Auto-unlock if cookie still valid
   useEffect(() => {
     (async () => {
       try {
@@ -141,9 +137,7 @@ export default function AdminPage() {
           await refreshSummary();
           await loadRoles();
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -230,13 +224,13 @@ export default function AdminPage() {
     setAssignOpen(false);
   }
 
-  function startAssign(role: RoleKey, slotIndex: number | null) {
+  function startAssign(role: RoleKey) {
     setAssignRole(role);
-    setAssignSlotIndex(slotIndex);
     setAssignOpen(true);
     setAFullName("");
     setAEmail("");
     setAPhone("");
+    setAPartySize(1);
     setARemindBy("EMAIL");
     setError(null);
   }
@@ -244,7 +238,6 @@ export default function AdminPage() {
   function cancelAssign() {
     setAssignOpen(false);
     setAssignRole(null);
-    setAssignSlotIndex(null);
   }
 
   async function submitAssign() {
@@ -252,6 +245,8 @@ export default function AdminPage() {
     setError(null);
     const name = aFullName.trim();
     if (name.length < 2) { setError("Name is too short."); return; }
+
+    const isAttender = assignRole === "ATTENDER";
 
     setASubmitting(true);
     try {
@@ -261,10 +256,10 @@ export default function AdminPage() {
         body: JSON.stringify({
           serviceDate: selectedDate,
           role: assignRole,
-          slotIndex: assignSlotIndex,
           fullName: name,
           email: aEmail.trim() || undefined,
           phone: aPhone.trim() || undefined,
+          partySize: isAttender ? aPartySize : 1,
           remindBy: aRemindBy,
         }),
       });
@@ -315,8 +310,8 @@ export default function AdminPage() {
     return map;
   }, [rows]);
 
-  function findRow(role: RoleKey, slotIndex: number) {
-    return rowsByRole[role]?.find((a) => a.slotIndex === slotIndex) || null;
+  function attenderSeatsUsed(): number {
+    return (rowsByRole["ATTENDER"] || []).reduce((s, a) => s + (a.partySize || 1), 0);
   }
 
   return (
@@ -391,10 +386,9 @@ export default function AdminPage() {
           })}
         </div>
 
-        <div className="adminHint">Badges show how many slots are filled. Click any Sunday to manage.</div>
+        <div className="adminHint">Badges show how many entries are filled. Click any Sunday to manage.</div>
       </div>
 
-      {/* Drawer */}
       <div className={["drawerOverlay", drawerOpen ? "open" : ""].join(" ")} onClick={closeDrawer} />
 
       <div className={["drawer", drawerOpen ? "open" : ""].join(" ")}>
@@ -402,7 +396,7 @@ export default function AdminPage() {
           <div>
             <div className="drawerTitle">{selectedDate ? niceDate(selectedDate) : "Manage"}</div>
             <div className="drawerSub">
-              {loading ? "Loading…" : `${rows.length} slot(s) filled`}
+              {loading ? "Loading…" : `${rows.length} entries · ${attenderSeatsUsed()} attending`}
             </div>
           </div>
           <button className="iconBtn" onClick={closeDrawer} aria-label="Close">✕</button>
@@ -415,13 +409,28 @@ export default function AdminPage() {
             <div className="signupForm">
               <div className="sectionLabel">
                 Assign someone to {assignRole ? ROLE_LABELS[assignRole] : ""}
-                {assignSlotIndex ? ` · slot ${assignSlotIndex}` : ""}
               </div>
 
               <div className="formField">
                 <label className="formLabel">Full name</label>
                 <input className="formInput" value={aFullName} onChange={(e) => setAFullName(e.target.value)} />
               </div>
+
+              {assignRole === "ATTENDER" && (
+                <div className="formField">
+                  <label className="formLabel">How many people?</label>
+                  <input
+                    className="formInput"
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={aPartySize}
+                    onChange={(e) => setAPartySize(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                  />
+                  <div className="formHelp">Include the signer in the count.</div>
+                </div>
+              )}
+
               <div className="formField">
                 <label className="formLabel">Email</label>
                 <input className="formInput" type="email" value={aEmail} onChange={(e) => setAEmail(e.target.value)} />
@@ -460,6 +469,62 @@ export default function AdminPage() {
                 if (!def) return null;
                 const filled = rowsByRole[roleKey] || [];
 
+                if (def.multipleEntries) {
+                  const used = attenderSeatsUsed();
+                  const cap = def.slots;
+                  const isFull = used >= cap;
+                  return (
+                    <div key={roleKey} className="roleSection">
+                      <div className="roleHeader">
+                        <div className="roleHeaderLeft">
+                          <div className="roleTitle">{def.label}</div>
+                          <div className="roleDesc">{def.description}</div>
+                        </div>
+                        <div className={["roleCount", isFull ? "full" : ""].filter(Boolean).join(" ")}>
+                          {used}/{cap} attending
+                        </div>
+                      </div>
+
+                      <div className="slotList">
+                        {filled.map((a) => (
+                          <div key={a.id} className="slot filled">
+                            <div className="slotMain">
+                              <div className="slotName">
+                                {a.fullName} <span style={{ opacity: 0.6, fontWeight: 800 }}>· {a.partySize} {a.partySize === 1 ? "person" : "people"}</span>
+                              </div>
+                              <div className="slotMeta">
+                                {a.email || ""}{a.email && a.phone ? " · " : ""}{a.phone || ""}
+                                {a.remindBy !== "EMAIL" ? ` · ${a.remindBy.toLowerCase()}` : ""}
+                              </div>
+                            </div>
+                            <div className="slotActions">
+                              <button className="slotBtn danger" onClick={() => deleteAssignment(a.id)}>Remove</button>
+                            </div>
+                          </div>
+                        ))}
+
+                        <div className="slot empty">
+                          <div className="slotMain">
+                            <div className="slotEmpty">
+                              {isFull ? "All spots taken" : `${cap - used} spot${cap - used === 1 ? "" : "s"} remaining`}
+                            </div>
+                          </div>
+                          <div className="slotActions">
+                            <button
+                              className="slotBtn primary"
+                              disabled={isFull}
+                              onClick={() => startAssign(roleKey)}
+                            >
+                              Add family
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const a = filled[0];
                 return (
                   <div key={roleKey} className="roleSection">
                     <div className="roleHeader">
@@ -467,46 +532,36 @@ export default function AdminPage() {
                         <div className="roleTitle">{def.label}</div>
                         <div className="roleDesc">{def.description}</div>
                       </div>
-                      <div className={["roleCount", filled.length >= def.slots ? "full" : ""].filter(Boolean).join(" ")}>
-                        {filled.length}/{def.slots}
+                      <div className={["roleCount", a ? "full" : ""].filter(Boolean).join(" ")}>
+                        {a ? "1/1" : "0/1"}
                       </div>
                     </div>
 
                     <div className="slotList">
-                      {Array.from({ length: def.slots }).map((_, i) => {
-                        const slotIndex = def.slots === 1 ? 0 : i + 1;
-                        const a = findRow(roleKey, slotIndex);
-                        return (
-                          <div key={`${roleKey}-${slotIndex}`} className={["slot", a ? "filled" : "empty"].join(" ")}>
-                            {def.slots > 1 && <div className="slotIndex">{slotIndex}</div>}
-                            <div className="slotMain">
-                              {a ? (
-                                <>
-                                  <div className="slotName">{a.fullName}</div>
-                                  <div className="slotMeta">
-                                    {a.email || ""}{a.email && a.phone ? " · " : ""}{a.phone || ""}
-                                    {a.remindBy !== "EMAIL" ? ` · ${a.remindBy.toLowerCase()}` : ""}
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="slotEmpty">Open</div>
-                              )}
-                            </div>
-                            <div className="slotActions">
-                              {a ? (
-                                <button className="slotBtn danger" onClick={() => deleteAssignment(a.id)}>Remove</button>
-                              ) : (
-                                <button
-                                  className="slotBtn primary"
-                                  onClick={() => startAssign(roleKey, def.slots === 1 ? null : slotIndex)}
-                                >
-                                  Assign
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                      <div className={["slot", a ? "filled" : "empty"].join(" ")}>
+                        <div className="slotMain">
+                          {a ? (
+                            <>
+                              <div className="slotName">{a.fullName}</div>
+                              <div className="slotMeta">
+                                {a.email || ""}{a.email && a.phone ? " · " : ""}{a.phone || ""}
+                                {a.remindBy !== "EMAIL" ? ` · ${a.remindBy.toLowerCase()}` : ""}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="slotEmpty">Open</div>
+                          )}
+                        </div>
+                        <div className="slotActions">
+                          {a ? (
+                            <button className="slotBtn danger" onClick={() => deleteAssignment(a.id)}>Remove</button>
+                          ) : (
+                            <button className="slotBtn primary" onClick={() => startAssign(roleKey)}>
+                              Assign
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
