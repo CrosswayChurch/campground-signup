@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
 import { fromYmd, isAllowedSunday } from "@/lib/schedule";
 import { ROLES, ATTENDER_CAP, roleByKey } from "@/lib/roles";
+import { sendByPreference } from "@/lib/messaging";
 
 export const dynamic = "force-dynamic";
 
@@ -170,6 +171,23 @@ export async function POST(req: Request) {
           remindBy: remindBy as any,
         },
       });
+
+      // Fire-and-forget confirmation message (don't block the response on it)
+      sendByPreference(
+        {
+          id: created.id,
+          serviceDate: dt,
+          role,
+          fullName,
+          email: email || null,
+          phone: phone || null,
+          remindBy,
+        },
+        "confirm"
+      ).catch(() => {
+        // Swallow errors — the signup itself succeeded
+      });
+
       return NextResponse.json({ ok: true, id: created.id });
     } catch (e: any) {
       if (String(e?.code) === "P2002") {
