@@ -23,8 +23,6 @@ export type Assignment = {
   phone: string | null;
 };
 
-// Maps each role to the action phrase used in messages.
-// "you have signed up to ___ on Sunday."
 const ROLE_ACTIONS: Record<string, string> = {
   ADULT_TEACHER: "Teach the Message",
   CHILDRENS_TEACHER: "Tell the children's story",
@@ -41,10 +39,19 @@ function firstName(fullName: string) {
   return (fullName || "").trim().split(/\s+/)[0] || "Friend";
 }
 
-function buildMessage(a: Assignment, kind: MessageKind) {
+// Channel-specific notice that the address/number doesn't accept replies
+function noReplyNote(channel: "email" | "sms") {
+  if (channel === "email") {
+    return `Please note: this email address (notifications@crossway-fellowship.org) cannot receive replies. If you have questions, please contact ${CONTACT_NAME}.`;
+  }
+  return `This text is from Crossway Fellowship's automated signup system and cannot receive replies. Contact ${CONTACT_NAME} with questions.`;
+}
+
+function buildMessage(a: Assignment, kind: MessageKind, channel: "email" | "sms") {
   const action = roleAction(a.role);
   const dateStr = niceDate(ymd(a.serviceDate));
   const fName = firstName(a.fullName);
+  const noReply = noReplyNote(channel);
 
   let subject: string;
   let body: string;
@@ -55,7 +62,7 @@ function buildMessage(a: Assignment, kind: MessageKind) {
 
 You have signed up to ${action} on Sunday, ${dateStr}.
 
-If you have questions please contact ${CONTACT_NAME}.
+${noReply}
 
 Thank you!
 — Crossway Fellowship`;
@@ -67,6 +74,8 @@ This is a friendly reminder that you signed up to ${action} for the service in 3
 
 If you can no longer make it, please contact ${CONTACT_NAME} so someone else can fill in.
 
+${noReply}
+
 Thank you!
 — Crossway Fellowship`;
   } else {
@@ -77,11 +86,12 @@ This is a friendly reminder that you signed up to ${action} for the service tomo
 
 If you can no longer make it, please contact ${CONTACT_NAME} so someone else can fill in.
 
+${noReply}
+
 Thank you!
 — Crossway Fellowship`;
   }
 
-  // HTML version of the body (paragraphs)
   const html = `<div style="font-family: ui-sans-serif, system-ui, sans-serif; color: #0f172a; line-height: 1.6;">
 ${body
   .split("\n\n")
@@ -96,7 +106,7 @@ export async function sendEmail(a: Assignment, kind: MessageKind) {
   if (!a.email) return { ok: false, reason: "no email" };
   if (!RESEND_API_KEY) return { ok: false, reason: "RESEND_API_KEY not set" };
 
-  const { subject, text, html } = buildMessage(a, kind);
+  const { subject, text, html } = buildMessage(a, kind, "email");
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -127,7 +137,7 @@ export async function sendSms(a: Assignment, kind: MessageKind) {
   if (!a.phone) return { ok: false, reason: "no phone" };
   if (!TEXTBELT_API_KEY) return { ok: false, reason: "TEXTBELT_API_KEY not set" };
 
-  const { text } = buildMessage(a, kind);
+  const { text } = buildMessage(a, kind, "sms");
 
   try {
     const params = new URLSearchParams();
@@ -151,7 +161,6 @@ export async function sendSms(a: Assignment, kind: MessageKind) {
   }
 }
 
-// Sends to whatever channels match the user's preference
 export async function sendByPreference(
   a: Assignment & { remindBy: string },
   kind: MessageKind
