@@ -251,8 +251,8 @@ export default function PublicSignupPage() {
                         <div className="roleTitle">{role.label}</div>
                         <div className="roleDesc">{role.description}</div>
                       </div>
-                      <div className={["roleCount", attenderFull ? "full" : ""].filter(Boolean).join(" ")}>
-                        {attenderUsed}/{attenderCap} attending
+                      <div className="roleCount">
+                        {attenderUsed} attending
                       </div>
                     </div>
 
@@ -280,8 +280,8 @@ export default function PublicSignupPage() {
                         <div className="slotMain">
                           <div className="slotEmpty">
                             {attenderFull
-                              ? "All spots taken for this Sunday"
-                              : `${attenderRemaining} spot${attenderRemaining === 1 ? "" : "s"} still available`}
+                              ? "Signups are closed for this Sunday"
+                              : "Add your name to attend"}
                           </div>
                         </div>
                         <div className="slotActions">
@@ -386,7 +386,7 @@ export default function PublicSignupPage() {
                   onChange={(e) => setPartySize(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
                 />
                 <div className="formHelp">
-                  Include yourself in the count. {attenderRemaining} spot{attenderRemaining === 1 ? "" : "s"} remaining.
+                  Include yourself in the count.
                 </div>
               </div>
             )}
