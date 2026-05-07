@@ -9,6 +9,7 @@ type RoleDef = {
   label: string;
   description: string;
   slots: number;
+  multipleEntries?: boolean;
 };
 
 type PublicAssignment = {
@@ -16,13 +17,10 @@ type PublicAssignment = {
   role: RoleKey;
   slotIndex: number;
   fullName: string;
+  partySize: number;
 };
 
 function pad2(n: number) { return String(n).padStart(2, "0"); }
-
-function ymd(d: Date) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
 
 function fromYmd(s: string) {
   const [y, m, d] = s.split("-").map(Number);
@@ -52,19 +50,17 @@ export default function PublicSignupPage() {
   const [assignments, setAssignments] = useState<PublicAssignment[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Signup form state
   const [formOpen, setFormOpen] = useState(false);
   const [formRole, setFormRole] = useState<RoleKey | null>(null);
-  const [formSlotIndex, setFormSlotIndex] = useState<number | null>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [partySize, setPartySize] = useState(1);
   const [remindBy, setRemindBy] = useState<"EMAIL" | "SMS" | "BOTH" | "NONE">("EMAIL");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Load Sundays
   useEffect(() => {
     (async () => {
       try {
@@ -75,14 +71,11 @@ export default function PublicSignupPage() {
         if (list.length > 0 && !selectedDate) {
           setSelectedDate(list[0]);
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load assignments for selected date
   useEffect(() => {
     if (!selectedDate) return;
     (async () => {
@@ -100,22 +93,21 @@ export default function PublicSignupPage() {
     })();
   }, [selectedDate]);
 
-  function openForm(role: RoleKey, slotIndex: number | null) {
+  function openForm(role: RoleKey) {
     setFormRole(role);
-    setFormSlotIndex(slotIndex);
     setFormOpen(true);
     setFormError(null);
     setSuccessMsg(null);
     setFullName("");
     setEmail("");
     setPhone("");
+    setPartySize(1);
     setRemindBy("EMAIL");
   }
 
   function closeForm() {
     setFormOpen(false);
     setFormRole(null);
-    setFormSlotIndex(null);
     setFormError(null);
   }
 
@@ -138,6 +130,12 @@ export default function PublicSignupPage() {
       return;
     }
 
+    const isAttender = formRole === "ATTENDER";
+    if (isAttender && (!Number.isFinite(partySize) || partySize < 1)) {
+      setFormError("Please enter how many people are attending.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch("/api/signups", {
@@ -146,10 +144,10 @@ export default function PublicSignupPage() {
         body: JSON.stringify({
           serviceDate: selectedDate,
           role: formRole,
-          slotIndex: formSlotIndex,
           fullName: name,
           email: e || undefined,
           phone: p || undefined,
+          partySize: isAttender ? partySize : 1,
           remindBy,
         }),
       });
@@ -160,18 +158,15 @@ export default function PublicSignupPage() {
       }
 
       setSuccessMsg(`Thanks, ${name.split(" ")[0]}! You're signed up.`);
-      // Refresh
       const r = await fetch(`/api/signups?date=${encodeURIComponent(selectedDate)}`, { cache: "no-store" });
       const d = await r.json();
       setAssignments(Array.isArray(d?.assignments) ? d.assignments : []);
-      // Auto-close after a moment
       setTimeout(() => closeForm(), 1400);
     } finally {
       setSubmitting(false);
     }
   }
 
-  // Group assignments by role for rendering
   const assignmentsByRole = useMemo(() => {
     const map: Record<string, PublicAssignment[]> = {};
     for (const a of assignments) {
@@ -188,6 +183,16 @@ export default function PublicSignupPage() {
     return assignmentsByRole[role]?.find((a) => a.slotIndex === slotIndex) || null;
   }
 
+  function attenderSeatsUsed(): number {
+    return (assignmentsByRole["ATTENDER"] || []).reduce((s, a) => s + (a.partySize || 1), 0);
+  }
+
+  const attenderRoleDef = roles.find((r) => r.key === "ATTENDER");
+  const attenderUsed = attenderSeatsUsed();
+  const attenderCap = attenderRoleDef?.slots || 20;
+  const attenderRemaining = Math.max(0, attenderCap - attenderUsed);
+  const attenderFull = attenderRemaining <= 0;
+
   return (
     <div className="publicPage">
       <div className="publicHero">
@@ -197,7 +202,6 @@ export default function PublicSignupPage() {
         </p>
       </div>
 
-      {/* Sunday picker */}
       <div className="sundayPicker">
         <div className="sundayPickerInner">
           <div className="sectionLabel" style={{ paddingLeft: 6, marginBottom: 8 }}>
@@ -225,7 +229,6 @@ export default function PublicSignupPage() {
         </div>
       </div>
 
-      {/* Roles for selected Sunday */}
       <div className="publicCard">
         <div className="publicCardInner">
           <div style={{ marginBottom: 6 }}>
@@ -239,9 +242,65 @@ export default function PublicSignupPage() {
             <div className="emptyState" style={{ marginTop: 14 }}>Loading…</div>
           ) : (
             roles.map((role) => {
-              const filledList = assignmentsByRole[role.key] || [];
-              const filledCount = filledList.length;
-              const isFull = filledCount >= role.slots;
+              if (role.multipleEntries) {
+                const families = assignmentsByRole[role.key] || [];
+                return (
+                  <div key={role.key} className="roleSection">
+                    <div className="roleHeader">
+                      <div className="roleHeaderLeft">
+                        <div className="roleTitle">{role.label}</div>
+                        <div className="roleDesc">{role.description}</div>
+                      </div>
+                      <div className={["roleCount", attenderFull ? "full" : ""].filter(Boolean).join(" ")}>
+                        {attenderUsed}/{attenderCap} attending
+                      </div>
+                    </div>
+
+                    <div className="slotList">
+                      {families.length === 0 ? (
+                        <div className="slot empty">
+                          <div className="slotMain">
+                            <div className="slotEmpty">No one signed up yet — be the first!</div>
+                          </div>
+                        </div>
+                      ) : (
+                        families.map((a) => (
+                          <div key={a.id} className="slot filled">
+                            <div className="slotMain">
+                              <div className="slotName">{a.fullName}</div>
+                              <div className="slotMeta">
+                                {a.partySize} {a.partySize === 1 ? "person" : "people"}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+
+                      <div className="slot empty">
+                        <div className="slotMain">
+                          <div className="slotEmpty">
+                            {attenderFull
+                              ? "All spots taken for this Sunday"
+                              : `${attenderRemaining} spot${attenderRemaining === 1 ? "" : "s"} still available`}
+                          </div>
+                        </div>
+                        <div className="slotActions">
+                          <button
+                            className="slotBtn primary"
+                            disabled={attenderFull}
+                            onClick={() => openForm(role.key)}
+                          >
+                            Sign up to attend
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              const a = findAssignment(role.key, 0);
+              const isFilled = !!a;
 
               return (
                 <div key={role.key} className="roleSection">
@@ -250,48 +309,31 @@ export default function PublicSignupPage() {
                       <div className="roleTitle">{role.label}</div>
                       <div className="roleDesc">{role.description}</div>
                     </div>
-                    <div className={["roleCount", isFull ? "full" : ""].filter(Boolean).join(" ")}>
-                      {filledCount}/{role.slots} filled
+                    <div className={["roleCount", isFilled ? "full" : ""].filter(Boolean).join(" ")}>
+                      {isFilled ? "1/1 filled" : "0/1 filled"}
                     </div>
                   </div>
 
                   <div className="slotList">
-                    {Array.from({ length: role.slots }).map((_, i) => {
-                      const slotIndex = role.slots === 1 ? 0 : i + 1;
-                      const a = findAssignment(role.key, slotIndex);
-
-                      return (
-                        <div
-                          key={`${role.key}-${slotIndex}`}
-                          className={["slot", a ? "filled" : "empty"].join(" ")}
-                        >
-                          {role.slots > 1 && (
-                            <div className="slotIndex">{slotIndex}</div>
-                          )}
-                          <div className="slotMain">
-                            {a ? (
-                              <>
-                                <div className="slotName">{a.fullName}</div>
-                              </>
-                            ) : (
-                              <div className="slotEmpty">Open</div>
-                            )}
-                          </div>
-                          <div className="slotActions">
-                            {!a && (
-                              <button
-                                className="slotBtn primary"
-                                onClick={() =>
-                                  openForm(role.key, role.slots === 1 ? null : slotIndex)
-                                }
-                              >
-                                Sign up
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    <div className={["slot", isFilled ? "filled" : "empty"].join(" ")}>
+                      <div className="slotMain">
+                        {a ? (
+                          <div className="slotName">{a.fullName}</div>
+                        ) : (
+                          <div className="slotEmpty">Open</div>
+                        )}
+                      </div>
+                      <div className="slotActions">
+                        {!a && (
+                          <button
+                            className="slotBtn primary"
+                            onClick={() => openForm(role.key)}
+                          >
+                            Sign up
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
@@ -300,7 +342,6 @@ export default function PublicSignupPage() {
         </div>
       </div>
 
-      {/* Signup form drawer */}
       <div
         className={["drawerOverlay", formOpen ? "open" : ""].join(" ")}
         onClick={closeForm}
@@ -332,6 +373,23 @@ export default function PublicSignupPage() {
                 placeholder="Jane Doe"
               />
             </div>
+
+            {formRole === "ATTENDER" && (
+              <div className="formField">
+                <label className="formLabel">How many people are attending?</label>
+                <input
+                  className="formInput"
+                  type="number"
+                  min={1}
+                  max={attenderRemaining || 1}
+                  value={partySize}
+                  onChange={(e) => setPartySize(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                />
+                <div className="formHelp">
+                  Include yourself in the count. {attenderRemaining} spot{attenderRemaining === 1 ? "" : "s"} remaining.
+                </div>
+              </div>
+            )}
 
             <div className="formField">
               <label className="formLabel">Email</label>
