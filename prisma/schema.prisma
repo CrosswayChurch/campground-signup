@@ -14,11 +14,12 @@ model Assignment {
   id          String   @id @default(cuid())
   serviceDate DateTime // The Sunday this assignment is for
   role        Role     // What role they're filling
-  slotIndex   Int      // 0 for unique roles, 1..20 for ATTENDER
+  slotIndex   Int      // 0 for unique roles, 1..N for ATTENDER
 
   fullName    String
   email       String?  // optional, but at least one of email/phone required
   phone       String?  // optional, E.164 ideally
+  partySize   Int      @default(1) // for ATTENDER: how many people including signer; 1 for solo roles
   remindBy    Remind   @default(EMAIL) // EMAIL, SMS, or BOTH
 
   // Reminder bookkeeping (so we don't double-send)
