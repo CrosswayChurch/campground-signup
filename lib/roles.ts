@@ -12,10 +12,16 @@ export type RoleDef = {
   key: RoleKey;
   label: string;
   description: string;
+  // For solo roles, slots = 1.
+  // For ATTENDER, slots is the max number of *people* (not entries) — we
+  // sum partySize across all attender entries for a given Sunday.
   slots: number;
+  // True if this role allows multiple entries (a family signs up once with a
+  // party size). False for unique roles (one row per Sunday).
+  multipleEntries?: boolean;
 };
 
-// Attender cap is 20 — the form will encourage 10–12 but allow up to 20.
+// Up to 20 people total; aiming for 10–12.
 export const ATTENDER_CAP = 20;
 export const ATTENDER_TARGET_MIN = 10;
 export const ATTENDER_TARGET_MAX = 12;
@@ -50,6 +56,7 @@ export const ROLES: RoleDef[] = [
     label: "Attenders",
     description: `Plans to attend (aiming for ${ATTENDER_TARGET_MIN}–${ATTENDER_TARGET_MAX})`,
     slots: ATTENDER_CAP,
+    multipleEntries: true,
   },
 ];
 
