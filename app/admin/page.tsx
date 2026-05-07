@@ -314,6 +314,46 @@ export default function AdminPage() {
     return (rowsByRole["ATTENDER"] || []).reduce((s, a) => s + (a.partySize || 1), 0);
   }
 
+  // Test message panel state
+  const [testOpen, setTestOpen] = useState(false);
+  const [testChannel, setTestChannel] = useState<"email" | "sms">("email");
+  const [testTo, setTestTo] = useState("");
+  const [testRole, setTestRole] = useState<RoleKey>("ATTENDER");
+  const [testKind, setTestKind] = useState<"confirm" | "3day" | "1day">("confirm");
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  async function sendTest() {
+    setTestResult(null);
+    if (!testTo.trim()) {
+      setTestResult({ ok: false, msg: "Enter an email or phone number." });
+      return;
+    }
+    setTestSending(true);
+    try {
+      const res = await fetch("/api/admin/test-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channel: testChannel,
+          to: testTo.trim(),
+          role: testRole,
+          kind: testKind,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setTestResult({ ok: false, msg: data?.error || "Send failed." });
+        return;
+      }
+      setTestResult({ ok: true, msg: `Sent ${testChannel === "email" ? "email" : "text"} to ${testTo}` });
+    } catch (e: any) {
+      setTestResult({ ok: false, msg: String(e?.message || e) });
+    } finally {
+      setTestSending(false);
+    }
+  }
+
   return (
     <div className="adminPage">
       {!authed ? (
@@ -387,6 +427,97 @@ export default function AdminPage() {
         </div>
 
         <div className="adminHint">Badges show how many entries are filled. Click any Sunday to manage.</div>
+      </div>
+
+      {/* Test message panel */}
+      <div className="adminCard" style={{ marginTop: 14 }}>
+        <button
+          className="adminBtn"
+          onClick={() => setTestOpen((v) => !v)}
+          style={{ width: "100%", textAlign: "left" }}
+          type="button"
+        >
+          {testOpen ? "▾" : "▸"} Send a test message
+        </button>
+
+        {testOpen && (
+          <div style={{ padding: "14px 4px 4px" }}>
+            <div className="signupForm">
+              <div className="formField">
+                <label className="formLabel">Channel</label>
+                <div className="radioGroup">
+                  {(["email", "sms"] as const).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={["radioOption", testChannel === c ? "selected" : ""].filter(Boolean).join(" ")}
+                      onClick={() => setTestChannel(c)}
+                    >
+                      {c === "email" ? "Email" : "Text"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="formField">
+                <label className="formLabel">
+                  {testChannel === "email" ? "Send to email" : "Send to phone"}
+                </label>
+                <input
+                  className="formInput"
+                  type={testChannel === "email" ? "email" : "tel"}
+                  value={testTo}
+                  onChange={(e) => setTestTo(e.target.value)}
+                  placeholder={testChannel === "email" ? "you@example.com" : "+1 555 555 5555"}
+                />
+              </div>
+
+              <div className="formField">
+                <label className="formLabel">As role</label>
+                <div className="radioGroup">
+                  {ROLE_ORDER.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className={["radioOption", testRole === r ? "selected" : ""].filter(Boolean).join(" ")}
+                      onClick={() => setTestRole(r)}
+                    >
+                      {ROLE_LABELS[r]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="formField">
+                <label className="formLabel">Message type</label>
+                <div className="radioGroup">
+                  {(["confirm", "3day", "1day"] as const).map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      className={["radioOption", testKind === k ? "selected" : ""].filter(Boolean).join(" ")}
+                      onClick={() => setTestKind(k)}
+                    >
+                      {k === "confirm" ? "Confirmation" : k === "3day" ? "3-day reminder" : "1-day reminder"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {testResult && (
+                <div className={testResult.ok ? "formSuccess" : "formError"}>
+                  {testResult.msg}
+                </div>
+              )}
+
+              <div className="formActions">
+                <button className="btnPrimary" onClick={sendTest} disabled={testSending}>
+                  {testSending ? "Sending…" : "Send test"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className={["drawerOverlay", drawerOpen ? "open" : ""].join(" ")} onClick={closeDrawer} />
