@@ -122,6 +122,7 @@ export async function POST(req: Request) {
   if (email || phone) {
     const conflict = await prisma.assignment.findFirst({
       where: {
+        role: role as any,
         serviceDate: { gte: dt, lt: next },
         OR: [
           email ? { email } : undefined,
@@ -131,7 +132,7 @@ export async function POST(req: Request) {
     });
     if (conflict) {
       return NextResponse.json(
-        { error: `${fullName} is already signed up for a role on this Sunday.` },
+        { error: `${fullName} is already signed up for that role on this Sunday.` },
         { status: 409 }
       );
     }
