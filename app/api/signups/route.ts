@@ -139,11 +139,12 @@ export async function POST(req: Request) {
       slotIndex = maxSlot + 1;
     }
 
-    // One-person-one-role-per-Sunday: check email/phone not already used
+      // Prevent double-booking the same role: check email/phone not already used for this role
     if (email || phone) {
       const conflicts = await prisma.assignment.findFirst({
         where: {
           serviceDate: { gte: dt, lt: next },
+          role: role as any,
           OR: [
             email ? { email } : undefined,
             phone ? { phone } : undefined,
@@ -152,7 +153,7 @@ export async function POST(req: Request) {
       });
       if (conflicts) {
         return NextResponse.json(
-          { error: "You're already signed up for a role on this Sunday." },
+          { error: "You're already signed up for that role on this Sunday." },
           { status: 409 }
         );
       }
