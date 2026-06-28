@@ -29,12 +29,13 @@ function nextSunday(from: Date) {
 }
 
 export function getAllowedSundays(): string[] {
-  const startStr = process.env.SCHEDULE_START_YYYYMMDD || "2026-05-31";
-  const weeks = Math.max(4, Math.min(2000, Number(process.env.SCHEDULE_WEEKS) || 104));
+    const weeks = Math.max(4, Math.min(2000, Number(process.env.SCHEDULE_WEEKS) || 8));
 
-  const parsed = fromYmd(startStr) || new Date();
-  const first = nextSunday(parsed);
-
+      // Always compute forward from today so the list never shows past Sundays.
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const first = nextSunday(today);
+  
   const list: string[] = [];
   const cur = new Date(first);
   for (let i = 0; i < weeks; i++) {
